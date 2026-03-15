@@ -6,7 +6,33 @@ import tempfile
 from pathlib import Path
 from typing import Any
 
-WORKSPACE_ROOT = Path(__file__).resolve().parents[3]
+
+def _detect_workspace_root() -> Path:
+    env_root = os.environ.get("CAPACITIES_WORKSPACE_ROOT", "").strip()
+    if env_root:
+        return Path(env_root).expanduser().resolve()
+
+    candidates: list[Path] = []
+    cwd = Path.cwd().resolve()
+    candidates.extend([cwd, *cwd.parents])
+
+    script_path = Path(__file__).resolve()
+    candidates.extend(script_path.parents)
+
+    seen: set[Path] = set()
+    for candidate in candidates:
+        if candidate in seen:
+            continue
+        seen.add(candidate)
+        if (candidate / "AGENTS.md").exists():
+            return candidate
+        if (candidate / "config" / "capacities.json").exists():
+            return candidate
+
+    return Path(__file__).resolve().parents[3]
+
+
+WORKSPACE_ROOT = _detect_workspace_root()
 DATA_DIR = WORKSPACE_ROOT / "data" / "capacities"
 STRUCTURES_PATH = DATA_DIR / "structures.json"
 SPACES_PATH = DATA_DIR / "spaces.json"

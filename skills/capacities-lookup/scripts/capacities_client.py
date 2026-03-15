@@ -8,9 +8,6 @@ import urllib.request
 from pathlib import Path
 from typing import Any
 
-WORKSPACE_ROOT = Path(__file__).resolve().parents[3]
-CONFIG_PATH = WORKSPACE_ROOT / "config" / "capacities.json"
-
 
 class CapacitiesError(RuntimeError):
     pass
@@ -30,6 +27,35 @@ class CapacitiesRateLimitError(CapacitiesError):
 
 class CapacitiesRequestError(CapacitiesError):
     pass
+
+
+def _detect_workspace_root() -> Path:
+    env_root = os.environ.get("CAPACITIES_WORKSPACE_ROOT", "").strip()
+    if env_root:
+        return Path(env_root).expanduser().resolve()
+
+    candidates: list[Path] = []
+    cwd = Path.cwd().resolve()
+    candidates.extend([cwd, *cwd.parents])
+
+    script_path = Path(__file__).resolve()
+    candidates.extend(script_path.parents)
+
+    seen: set[Path] = set()
+    for candidate in candidates:
+        if candidate in seen:
+            continue
+        seen.add(candidate)
+        if (candidate / "AGENTS.md").exists():
+            return candidate
+        if (candidate / "config" / "capacities.json").exists():
+            return candidate
+
+    return Path(__file__).resolve().parents[3]
+
+
+WORKSPACE_ROOT = _detect_workspace_root()
+CONFIG_PATH = WORKSPACE_ROOT / "config" / "capacities.json"
 
 
 def load_config() -> dict[str, Any]:

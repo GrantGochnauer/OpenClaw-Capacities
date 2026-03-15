@@ -106,4 +106,4 @@ Example:
 - This skill intentionally uses **live lookup + light cache**, not full sync.
 - Structures metadata is cached under workspace `data/capacities/`.
 - Lookup cache is convenience-only; live lookup remains authoritative.
-- Type-aware behavior depends on the cached structures metadata, so a structure sync should happen before relying on custom object types.
+- Type-aware behavior depends on cached structures metadata, so run a structure sync before relying on custom object types.
