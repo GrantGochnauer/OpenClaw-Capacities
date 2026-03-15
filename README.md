@@ -1,22 +1,46 @@
 # OpenClaw Capacities
 
-A lightweight **OpenClaw skill** that lets an assistant search **Capacities** in real time, rank likely matches intelligently, and return direct `capacities://` links back into the app.
+A lightweight **OpenClaw skill** for real-time **Capacities** lookup, type-aware ranking, and direct `capacities://` deep links.
 
-This project is intentionally pragmatic: it uses the **current public Capacities API** as it exists today, which makes it useful for object lookup now without pretending to support capabilities the API does not expose.
+It uses the **current public Capacities API** as it exists today, focusing on what is reliable now: smart object lookup, useful ranking, and fast handoff back into Capacities.
 
-## What it can do
+## Quick Start
 
-- Search Capacities for likely object matches by title/search term
-- Return direct `capacities://` deep links
-- Enrich results with object types using cached `/space-info` metadata
-- Support **type-aware lookup** across object types in your space
+```bash
+# 1) Clone the repo
+git clone git@github.com:GrantGochnauer/OpenClaw-Capacities.git
+cd OpenClaw-Capacities
+
+# 2) Add the skill to your OpenClaw workspace
+mkdir -p ~/.openclaw/workspace/skills
+cp -R skills/capacities-lookup ~/.openclaw/workspace/skills/
+
+# 3) Configure Capacities access
+export CAPACITIES_API_TOKEN='your-token-here'
+export CAPACITIES_SPACE_ID='your-space-id'
+
+# 4) Sync structure metadata
+python3 skills/capacities-lookup/scripts/capacities_cli.py sync-structures
+
+# 5) Run a lookup
+python3 skills/capacities-lookup/scripts/capacities_cli.py lookup "Find my notes on recovery"
+```
+
+Start a **new OpenClaw session** after installing the skill so it gets picked up.
+
+## What it does
+
+- Searches Capacities for likely object matches by title/search term
+- Returns direct `capacities://` deep links
+- Enriches results with object types using cached `/space-info` metadata
+- Supports **type-aware lookup** across object types in your space
   - examples: `people`, `notes`, `meetings`, `projects`, and custom types from your Capacities structures
-- Support **intent-aware ranking**
+- Supports **intent-aware ranking**
   - example: `Find my notes on recovery protocols` prefers **Note/Reference** results over generic **Tag** hits
-- Expand to a small set of **related terms** for better recall
-- Tell you clearly when the **requested object type was not found** and offer sensible fallback objects
+- Expands to a small set of **related terms** for better recall
+- Tells you clearly when the **requested object type was not found** and offers sensible fallback objects
 
-## What it does NOT do
+## What it does not do
 
 Because of the current public Capacities API limitations, this skill does **not**:
 
@@ -26,7 +50,26 @@ Because of the current public Capacities API limitations, this skill does **not*
 - answer membership/relationship questions unless the target object is discoverable directly from title lookup
 - maintain a full local mirror or background sync loop of Capacities content
 
-### Why those limitations exist
+## When to use it
+
+Use this skill when you want to:
+
+- find the right Capacities object quickly
+- jump back into Capacities with a deep link
+- disambiguate likely notes, meetings, projects, people, or references by title
+- help an assistant suggest likely Capacities matches during conversation
+
+## When not to use it
+
+This is **not** the right tool for:
+
+- full PKM ingestion
+- semantic search over all note bodies
+- organization membership inference from relations
+- graph traversal over linked objects
+- offline full-workspace querying
+
+## Why these limitations exist
 
 The documented public Capacities API currently gives us enough to work with:
 
@@ -44,44 +87,11 @@ But it does **not** expose a documented public way to:
 
 So this skill focuses on what is reliable today: **smart lookup + type awareness + deep linking**.
 
-## How it works
-
-### Live lookup first
-The skill performs **real-time API lookups** when needed.
-
-### Light cache only
-It caches only:
-
-- Capacities structures/object types from `/space-info`
-- optional lookup results for convenience
-- local state/error metadata
-
-This cache exists to improve type awareness and responsiveness — not to become a second database.
-
-## Repository layout
-
-```text
-OpenClaw-Capacities/
-├── README.md
-├── .gitignore
-└── skills/
-    └── capacities-lookup/
-        ├── SKILL.md
-        └── scripts/
-            ├── capacities_cache.py
-            ├── capacities_client.py
-            ├── capacities_cli.py
-            ├── capacities_lookup.py
-            └── capacities_sync.py
-```
-
 ## Installation
 
 ### Option 1: install locally into an OpenClaw workspace
 
 Clone this repo, then copy or symlink the skill into your OpenClaw workspace `skills/` directory.
-
-Example:
 
 ```bash
 git clone git@github.com:GrantGochnauer/OpenClaw-Capacities.git
@@ -89,8 +99,6 @@ cd OpenClaw-Capacities
 mkdir -p ~/.openclaw/workspace/skills
 cp -R skills/capacities-lookup ~/.openclaw/workspace/skills/
 ```
-
-Or install into the current OpenClaw workspace’s `skills/` folder.
 
 Then start a **new OpenClaw session** so the skill is picked up.
 
@@ -111,8 +119,6 @@ Set your Capacities API token:
 ```bash
 export CAPACITIES_API_TOKEN='your-token-here'
 ```
-
-### Required space selection
 
 Set your Capacities space id:
 
@@ -173,7 +179,7 @@ python3 skills/capacities-lookup/scripts/capacities_cli.py verify-space
 
 ```bash
 source ~/.zshrc >/dev/null 2>&1 || true
-python3 skills/capacities-lookup/scripts/capacities_cli.py lookup "Find my notes on recovery protocols"
+python3 skills/capacities-lookup/scripts/capacities_cli.py lookup "Find my notes on recovery"
 ```
 
 ```bash
@@ -213,9 +219,8 @@ Behavior:
 - prefers Person objects if any exist
 - if no Person objects match, reports that clearly and provides fallback objects
 
-## Current known limitations in practice
+## Practical limitation example
 
-### Example limitation
 The skill can often find a target **Person** object directly by name.
 
 But it cannot currently verify whether that person is linked to some other object through a property or relation field, because the current public API does not expose object property/relationship reads.
@@ -226,37 +231,40 @@ So the skill can answer:
 But not reliably:
 - “Which people are attached to this organization via relations?”
 
-## Best use cases
+## How it works
 
-This skill is best for:
+### Live lookup first
+The skill performs **real-time API lookups** when needed.
 
-- finding the right Capacities object quickly
-- jumping back into Capacities with a deep link
-- disambiguating likely notes/meetings/projects/people by title
-- helping an assistant suggest likely Capacities matches during conversation
+### Light cache only
+It caches only:
 
-## Not the right tool for
+- Capacities structures/object types from `/space-info`
+- optional lookup results for convenience
+- local state/error metadata
 
-- full PKM ingestion
-- semantic search over all note bodies
-- organization membership inference from relations
-- graph traversal over linked objects
-- offline full-workspace querying
+This cache exists to improve type awareness and responsiveness — not to become a second database.
 
-## Development notes
-
-The skill is intentionally self-contained and kept under:
+## Repository layout
 
 ```text
-skills/capacities-lookup/
+OpenClaw-Capacities/
+├── README.md
+├── .gitignore
+└── skills/
+    └── capacities-lookup/
+        ├── SKILL.md
+        └── scripts/
+            ├── capacities_cache.py
+            ├── capacities_client.py
+            ├── capacities_cli.py
+            ├── capacities_lookup.py
+            └── capacities_sync.py
 ```
-
-The runtime cache is written under workspace `data/capacities/`.
 
 ## Publishing
 
 ### GitHub repo
-Target repo:
 - `https://github.com/GrantGochnauer/OpenClaw-Capacities`
 
 ### ClawHub
